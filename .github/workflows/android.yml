@@ -50,11 +50,19 @@ jobs:
         with:
           path: ~/.android/debug.keystore
           key: scangaia-debug-signing-v1
+      - name: Preparar firma de prueba persistente
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=ScanGaia,C=GT"
+          fi
       - name: Compilar APK de prueba
         working-directory: android
         run: ./gradlew assembleDebug
       - name: Exportar huella pública para Google OAuth
-        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android > android/app/build/outputs/apk/debug/google-signing-fingerprint.txt
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk > android/app/build/outputs/apk/debug/google-signing-fingerprint.txt
+          cat android/app/build/outputs/apk/debug/google-signing-fingerprint.txt
       - uses: actions/upload-artifact@v4
         with:
           name: ScanGaia-Android-APK-1.0.3
