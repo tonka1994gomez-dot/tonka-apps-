@@ -28,7 +28,7 @@ jobs:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: node scripts/prepare-scanpro.mjs
-      - run: pnpm exec tsc --noEmit
+      - run: pnpm exec tsc --noEmit -p tsconfig.android.json
       - run: pnpm exec vite build --config vite.android.config.ts
       - run: if [ ! -d android ]; then pnpm exec cap add android; fi
       - run: pnpm exec cap sync android
