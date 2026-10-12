@@ -1,115 +1,35 @@
-# ScanGaia — beta funcional
+# ScanGaia
 
-Aplicación original en español para escanear documentos, procesar imágenes y crear PDF. React + TypeScript, PWA y proyecto Android con Capacitor. Esta entrega NO declara terminada la Fase 1: faltan validaciones reales de cámara/PWA/Android, OCR español y Supabase con dos cuentas independientes.
+Escáner de documentos para Android. Cámara e importación de imágenes/PDF, recorte con perspectiva, filtros, PDF multipágina, lector PDF interno, carpetas, favoritos, papelera y OCR.
 
-## Empezar
+## Android 1.0.3: Google y Drive
 
-Requisitos: Node 22 y pnpm 11.25.0.
+El acceso con Supabase fue retirado. La app usa el selector oficial de cuentas Google mediante Credential Manager. El permiso de Drive se solicita por separado con AuthorizationClient y el alcance drive.file.
+
+Para activar Google, el propietario debe crear en Google Cloud un cliente OAuth Android para el paquete `gt.scanpro.app` y la huella SHA-1 del APK, además de un cliente OAuth de tipo Web. Configurar en GitHub Settings > Secrets and variables > Actions > Variables la variable `VITE_GOOGLE_WEB_CLIENT_ID` con el ID del cliente Web. Activar Google Drive API y añadir drive.file al consentimiento OAuth; mientras la app esté en pruebas, registrar los usuarios de prueba. No se necesita ni se debe introducir un client secret en la app.
+
+El artefacto del APK incluye `google-signing-fingerprint.txt` con la huella pública para el registro OAuth. La firma de la beta se conserva en la caché de GitHub Actions; si la caché se pierde y cambia la firma, hay que actualizar el cliente OAuth y respaldar los documentos antes de reinstalar. Una distribución permanente requiere una clave de firma administrada para producción.
+
+### Subida automática
+
+1. Iniciar sesión con Google.
+2. Abrir Perfil y elegir Vincular Drive y subir documentos.
+3. Autorizar el permiso de Drive. Se suben los PDF locales existentes y los nuevos escaneos guardados o PDF importados a la carpeta ScanGaia.
+
+Cada documento muestra pendiente, subiendo, guardado o error. Sin conexión, la cola se conserva en IndexedDB y se reintenta al abrir la app, volver a primer plano, recuperar conexión y cada minuto mientras la app está abierta. No se ejecuta con la app cerrada. La cola se vincula a una cuenta concreta. Cambiar o desconectar la cuenta detiene esa cola. La papelera local no elimina archivos de Drive.
+
+Las subidas usan sesiones reanudables con bloques de 1 MiB y un ID de archivo persistido antes de empezar, evitando duplicar documentos al reintentar. Ante una interrupción se inicia una nueva sesión con ese mismo ID y se verifica el tamaño final. No se conserva una sesión de bytes entre cierres. Los tokens de acceso solo se usan en memoria. El perfil recordado es información de presentación; las operaciones de Drive siempre requieren autorización de Google. Las copias locales no quedan aisladas por cuenta ni cifradas; el acceso con Google no constituye un bloqueo de documentos.
+
+### Compilar
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 node scripts/prepare-scanpro.mjs
-pnpm run dev
+pnpm exec tsc --noEmit -p tsconfig.android.json
+pnpm exec vite build --config vite.android.config.ts
+pnpm exec cap sync android
+cd android
+./gradlew assembleDebug
 ```
 
-La cámara web necesita HTTPS o localhost y permiso del usuario. En Android se utiliza el plugin oficial Camera. No hay cuentas ni documentos de demostración.
-
-## Generar el APK en GitHub
-
-1. Crea un repositorio vacío, preferiblemente privado, en tu cuenta de GitHub.
-2. Sube **el contenido** de este proyecto (no el ZIP como único archivo). Incluye `.github/workflows/android.yml`, `pnpm-lock.yaml` y la carpeta `android`.
-3. Abre **Actions → Compilar ScanGaia Android → Run workflow**. También se ejecuta al enviar cambios a `main`.
-4. Cuando finalice correctamente, descarga **ScanGaia-Android-APK** en Artifacts, descomprime e instala `app-debug.apk` en tu teléfono.
-
-El flujo instala Java 21, SDK Android, compila React y ejecuta Gradle. El APK es de pruebas con firma debug: no es una publicación de Google Play. El flujo está preparado, pero aún no se ha ejecutado en la cuenta del usuario. No se generó un APK durante esta entrega porque no hay repositorio accesible ni SDK Android local.
-
-## Supabase
-
-1. Crea un proyecto Supabase y ejecuta `supabase/migrations/001_scanpro.sql` una sola vez en SQL Editor.
-2. Activa autenticación por correo. Configura Site URL y Redirect URLs para la URL web de ScanGaia. Recuperación de contraseña en Android con enlace profundo queda pendiente; usa la versión web.
-3. En ScanGaia → Perfil, introduce la URL del proyecto y una clave **pública** `publishable` o `anon`. Nunca introduzcas `service_role` ni una clave secreta.
-4. Regístrate, confirma el correo e inicia sesión.
-5. Abre un documento y elige **Guardar en nube**. Solo entonces se envía el PDF al proyecto Supabase configurado.
-6. En otro dispositivo, configura el mismo proyecto, inicia sesión y elige **Recuperar de la nube**.
-
-Storage utiliza un bucket privado `documents`, rutas `user-id/document-id.pdf` y RLS. No se generan enlaces públicos. La migración crea las once tablas del PRD con restricciones de pertenencia, índices y políticas RLS. `share_links` queda sin permisos de emisión desde el cliente: la funcionalidad no está implementada y requerirá backend.
-
-La sincronización actual es manual de PDF. Carpetas, fuentes originales, filtros y OCR se conservan localmente: aún no se sincronizan a Supabase. Los botones distinguen la copia local y la copia de nube. La eliminación definitiva de la nube elimina el objeto y el registro; es una operación en dos pasos reintentable.
-
-## Funciones implementadas
-
-- Captura con cámara web y cámara nativa Android, e importación JPG/PNG/PDF.
-- Detección de bordes con OpenCV cargado bajo demanda; detección automática tras capturar y botón para imágenes importadas.
-- Ajuste de cuatro esquinas con dedo, mouse o flechas del teclado, y corrección geométrica de perspectiva.
-- Rotación, cinco filtros, brillo y contraste, restauración de original y vista previa.
-- Documento de hasta 40 imágenes, orden por arrastre o botones y eliminación de páginas.
-- PDF real multipágina en A4, Carta, Oficio (8.5 × 13 pulgadas) y tamaño según imagen; tres niveles de calidad; tamaño real tras guardar.
-- Descarga PDF/JPG, compartir navegador con alternativa de descarga, y exportación nativa Android mediante hoja de compartir.
-- IndexedDB: documentos, originales de los escaneos guardados, borrador, carpetas/subcarpetas, renombrado, movimiento, duplicación, favoritos y papelera.
-- Visor PDF del navegador con alternativa de descarga en dispositivos sin visor integrado.
-- OCR Tesseract local de todas las páginas de un PDF, español e inglés, progreso, edición, guardado, copia, TXT y búsqueda de texto local.
-- Supabase Auth, registro, acceso y recuperación web; carga y recuperación manual de PDF privados, sujetos a configurar el servicio y validar RLS.
-- Diseño responsive, modo oscuro, manifiesto PWA, iconos y service worker de activos estáticos. Recarga completamente offline no garantizada en el alojamiento privado.
-
-## Limitaciones / no disponibles
-
-- No se implementaron anotaciones, firmas, marcas de agua, edición vectorial de PDF ni PDF buscable.
-- No se implementaron modos ID/libro/pizarra, reducción avanzada de sombras, nitidez, tablas, Word/Excel/PowerPoint, traducción, IA, fax, OAuth Drive/Dropbox/OneDrive, enlaces compartidos protegidos o PDF cifrado.
-- Filtros sencillos no prometen eliminación de sombras ni reconstrucción de texto borroso.
-- Detección OpenCV y filtros ejecutan cálculos en el hilo principal; se necesita perfilar y migrar trabajo pesado a Web Workers para gama media. La corrección de perspectiva cede periódicamente el hilo; OCR usa su worker.
-- OpenCV se descarga bajo demanda (~11 MB sin compresión); OCR descarga motor e idiomas en el primer uso. No se envía el contenido documental a un proveedor OCR.
-- Las imágenes originales de galería se conservan como fuente; las de cámara son la captura JPEG. Procesamiento limitado a 2400 px (perspectiva a 2200 px) para controlar memoria. Importación de imagen: 35 MB; PDF: 50 MB y OCR hasta 40 páginas.
-- El almacenamiento local pertenece al navegador/dispositivo, no a una cuenta Supabase. No está cifrado por ScanGaia; permanece tras cerrar sesión y se pierde al borrar los datos del navegador. No utilizar modo local en dispositivos compartidos sin eliminar las copias.
-- Contraseñas de enlaces no se almacenan porque no hay enlaces implementados.
-- El APK no tiene todavía una identidad de firma de distribución ni pruebas físicas; no se debe considerar listo para publicar en Play Store.
-
-## Verificación realizada
-
-```sh
-pnpm exec tsc --noEmit
-node tests/run.mjs
-pnpm run build:android
-node scripts/prepare-scanpro.mjs
-pnpm run build
-```
-
-Se verificaron: PDF de cinco páginas en cuatro formatos, orden de las imágenes incrustadas, dimensiones de recorte de perspectiva, rechazo de esquinas cruzadas, rotación, cinco filtros y detección OpenCV sobre un documento sintético de alto contraste. TypeScript y compilación web/paquete web de Android pasan. Se generó y sincronizó el proyecto nativo Android con los plugins Camera, Filesystem y Share.
-
-**No verificado:** interacción visual de navegador, cámara en teléfono, instalación PWA/APK, OCR español sobre fotografía real, entrega de correo, recuperación, carga Supabase y aislamiento entre dos cuentas. No hay credenciales Supabase ni un repositorio GitHub accesible en esta sesión. La Fase 1 permanece en beta hasta completar estas pruebas.
-
-## Prueba de aceptación pendiente
-
-- En Android, capturar cinco hojas; ajustar esquinas, aplicar filtros, reordenar y comprobar el PDF de cinco páginas.
-- Cerrar y reabrir: documento, carpeta, OCR y borrador deben persistir.
-- Con Supabase configurado, registrar dos usuarios A y B. Subir como A; comprobar que B no puede consultar el registro, descargar el objeto ni insertar relaciones con IDs de A.
-- Recuperar la copia en otro dispositivo, probar permisos de cámara denegados y desconexión de red.
-- OCR sobre hoja impresa en español y comparación manual del resultado.
-- Ejecutar GitHub Actions, instalar el APK generado y comprobar captura/exportación en Android.
-
-## Arquitectura
-
-- `app/page.tsx`: interfaz y flujos de usuario.
-- `lib/scanpro/imaging.ts`: OpenCV, homografía y filtros.
-- `lib/scanpro/pdf.ts`: creación y rasterización PDF.
-- `lib/scanpro/storage.ts`: IndexedDB y exportación.
-- `lib/scanpro/cloud.ts`: conexión Supabase.
-- `supabase/migrations/001_scanpro.sql`: esquema y seguridad.
-- `android-web/`, `capacitor.config.ts`, `android/`: aplicación Android.
-- `.github/workflows/android.yml`: compilación APK.
-
-Documentación de referencia: https://supabase.com/docs/guides/storage/security/access-control y https://capacitorjs.com/docs/getting-started/environment-setup .
-
-## Correcciones Android 1.0.1
-
-- Visor PDF interno con PDF.js: navegación y zoom sin una aplicación externa.
-- Menú de efectos visible encima de la foto, con acceso a recorte y rotación.
-- Inicio de sesión y registro visibles; validación de correo y contraseña.
-- Suscripción a cambios de sesión después de configurar la nube.
-
-El servicio de cuentas aún requiere un proyecto Supabase real y su migración SQL. Configurar las variables del repositorio `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` antes de compilar permite integrar la configuración pública sin que cada usuario deba introducirla. Usar exclusivamente una clave publishable/anon; nunca una clave secret/service_role. Sin estas variables la aplicación informa que las cuentas no están activadas y permite trabajar en modo local. Recuperación por correo en Android requiere configurar y validar el enlace de retorno.
-
-GitHub Actions comprueba el visor de tres páginas, navegación, zoom y el filtro blanco y negro en una pantalla de 390 × 844 antes de generar el APK. La instalación y cámara nativa deben probarse en un teléfono real.
-
-## ScanGaia 1.0.2
-
-Nombre visible actualizado en Android y PWA. Identificador de aplicación y claves de almacenamiento conservados. Interfaz móvil oscura con turquesa, lista de documentos, acceso a cámara, recorte seguido de efectos con miniaturas y comparación de la imagen original. Las referencias visuales no se incluyen en el repositorio. Los escaneos, firmas y datos personales de esas capturas no se usan como contenido de la app.
+GitHub Actions ejecuta las comprobaciones de TypeScript, las pruebas de cola de Drive y las pruebas de interfaz móvil antes de compilar. Sin un registro OAuth real, el APK se puede compilar y escanear en modo local, pero Google y Drive permanecen sin activar. El consentimiento real y la carga a una cuenta real deben verificarse después del registro.

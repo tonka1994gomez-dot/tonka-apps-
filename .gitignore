@@ -57,3 +57,5 @@ next-env.d.ts
 
 /dist-android/
 *.tsbuildinfo
+
+/qa/

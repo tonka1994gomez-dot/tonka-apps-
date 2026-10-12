@@ -38,9 +38,6 @@ importers:
       '@shadcn/react':
         specifier: ^0.3.0
         version: 0.3.0(@types/react@19.2.14)(react@19.2.6)
-      '@supabase/supabase-js':
-        specifier: 2.57.4
-        version: 2.57.4
       '@techstark/opencv-js':
         specifier: 4.11.0-release.1
         version: 4.11.0-release.1
