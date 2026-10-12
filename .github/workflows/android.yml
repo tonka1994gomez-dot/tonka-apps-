@@ -30,6 +30,17 @@ jobs:
       - run: node scripts/prepare-scanpro.mjs
       - run: pnpm exec tsc --noEmit -p tsconfig.android.json
       - run: pnpm exec vite build --config vite.android.config.ts
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      - name: Verificar visor PDF y efectos en pantalla móvil
+        run: |
+          npm install --prefix /tmp/scanpro-qa --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          node /tmp/scanpro-qa/node_modules/playwright/cli.js install --with-deps chromium
+          python3 -m http.server 8765 --directory dist-android > /tmp/scanpro-qa-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          NODE_PATH=/tmp/scanpro-qa/node_modules node tests/mobile-ui.cjs
       - run: if [ ! -d android ]; then pnpm exec cap add android; fi
       - run: pnpm exec cap sync android
       - name: Permiso de cámara
@@ -39,6 +50,6 @@ jobs:
         run: ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: ScanPro-Android-APK
+          name: ScanPro-Android-APK-1.0.1
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14

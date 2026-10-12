@@ -98,3 +98,14 @@ Se verificaron: PDF de cinco páginas en cuatro formatos, orden de las imágenes
 - `.github/workflows/android.yml`: compilación APK.
 
 Documentación de referencia: https://supabase.com/docs/guides/storage/security/access-control y https://capacitorjs.com/docs/getting-started/environment-setup .
+
+## Correcciones Android 1.0.1
+
+- Visor PDF interno con PDF.js: navegación y zoom sin una aplicación externa.
+- Menú de efectos visible encima de la foto, con acceso a recorte y rotación.
+- Inicio de sesión y registro visibles; validación de correo y contraseña.
+- Suscripción a cambios de sesión después de configurar la nube.
+
+El servicio de cuentas aún requiere un proyecto Supabase real y su migración SQL. Configurar las variables del repositorio `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` antes de compilar permite integrar la configuración pública sin que cada usuario deba introducirla. Usar exclusivamente una clave publishable/anon; nunca una clave secret/service_role. Sin estas variables la aplicación informa que las cuentas no están activadas y permite trabajar en modo local. Recuperación por correo en Android requiere configurar y validar el enlace de retorno.
+
+GitHub Actions comprueba el visor de tres páginas, navegación, zoom y el filtro blanco y negro en una pantalla de 390 × 844 antes de generar el APK. La instalación y cámara nativa deben probarse en un teléfono real.
