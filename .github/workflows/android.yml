@@ -29,10 +29,7 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: node scripts/prepare-scanpro.mjs
       - run: pnpm exec tsc --noEmit -p tsconfig.android.json
-      - run: node tests/drive-queue.mjs
       - run: pnpm exec vite build --config vite.android.config.ts
-        env:
-          VITE_GOOGLE_WEB_CLIENT_ID: ${{ vars.VITE_GOOGLE_WEB_CLIENT_ID }}
       - name: Verificar visor PDF y efectos en pantalla móvil
         run: |
           npm install --prefix /tmp/scanpro-qa --ignore-scripts --no-audit --no-fund playwright@1.56.1
@@ -59,12 +56,8 @@ jobs:
       - name: Compilar APK de prueba
         working-directory: android
         run: ./gradlew assembleDebug
-      - name: Exportar huella pública para Google OAuth
-        run: |
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk > android/app/build/outputs/apk/debug/google-signing-fingerprint.txt
-          cat android/app/build/outputs/apk/debug/google-signing-fingerprint.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: ScanGaia-Android-APK-1.0.3
-          path: android/app/build/outputs/apk/debug/
+          name: ScanGaia-Android-APK-1.0.4
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
