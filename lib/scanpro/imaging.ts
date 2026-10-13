@@ -1,5 +1,5 @@
 export type Point={x:number;y:number};
-export type Page={id:string;original:string;image:string;base?:string;filter:string};
+export type Page={id:string;original:string;image:string;base?:string;filter:string;processing?:'queued'|'ready'|'review';processingError?:string};
 export const loadImage=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('No se pudo leer la imagen'));im.src=src});
 export async function canvasOf(src:string,max=2400){const im=await loadImage(src);const c=document.createElement('canvas');const r=Math.min(1,max/im.width,max/im.height);c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d')!.drawImage(im,0,0,c.width,c.height);return c}
 export async function fromFile(f:File){if(f.size>35*1024*1024)throw Error('Máximo 35 MB por imagen');return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result as string);r.onerror=()=>reject(Error('No se pudo leer el archivo'));r.readAsDataURL(f)})}

@@ -13,3 +13,11 @@ Los documentos locales y el identificador de Android se conservan. Desinstalar l
 ## Compilación
 
 GitHub Actions ejecuta TypeScript y pruebas del visor PDF y la interfaz móvil antes de generar el APK de prueba. La firma de prueba se conserva mediante una caché de GitHub; si cambia o se pierde, Android puede exigir reinstalación. La selección nativa de aplicaciones y la recepción efectiva en Drive deben verificarse en un teléfono real.
+
+## 1.0.5: escaneo por lote
+
+La cámara integrada permanece abierta entre capturas en modo Lote. Un Web Worker separado detecta los bordes y aplica corrección de perspectiva a cada imagen; las fotos sin un contorno fiable se conservan completas y se marcan para revisión. Hasta 100 páginas por PDF, con un máximo de seis fotos pendientes para controlar el uso de memoria. Los trabajos pendientes se conservan en el borrador y se reanudan al abrir la app. Este procesamiento ocurre con la app abierta; no es un servicio Android que continúe tras cerrar la aplicación.
+
+Los efectos muestran solo sus nombres. Guardar PDF permanece en la cabecera del editor durante el desplazamiento y espera a que la cola termine. Cámara del teléfono es el respaldo si el WebView no permite una cámara continua. En ese respaldo se debe volver a pulsar para cada foto. Google Cloud y la sincronización automática siguen retirados; el envío del PDF es manual.
+
+Las pruebas automáticas usan tres documentos sintéticos y una cámara simulada para verificar que la cámara permanece abierta, el trabajador recorta y el botón superior genera un PDF de tres páginas. Se requiere validar la cámara y el rendimiento en un teléfono real.
